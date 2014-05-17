@@ -1,3 +1,5 @@
+{- Copyright 2014 eruonna, see LICENSE -}
+
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE FlexibleContexts #-}
@@ -18,8 +20,14 @@ instance Monoid a => Monoid (Identity a) where
   mempty = Identity mempty
   mappend (Identity a) (Identity b) = Identity $ a <> b
 
+-- |A generic tropical value. The idea is that @v@ represents some optimizable
+--structure using a 'Monoid' instance to build, with @a@ as the weight. The
+--functor @f@ describes how to treat equally weighted values. The common
+--expected use case is @AugmentedTropical [] v a@, tracking all minimal values.
 data AugmentedTropical f v a = Infinity | AT (f v) a deriving Show
 
+-- The algebra package also has concepts of equality and ordering. Perhaps
+-- those should be used instead?
 instance (Eq a) => Eq (AugmentedTropical f v a) where
   Infinity == Infinity = True
   Infinity == _ = False
@@ -58,10 +66,13 @@ instance (Ord a, Num a, Monoid v, Applicative f, Monoid (f v)) => Rig (Augmented
   fromNatural 0 = zero
   fromNatural _ = one
 
+-- |A simple tropical weight not attached to a structure.
 type Tropical a = AugmentedTropical [] () a
 
+-- |Tag a value with a weight.
 weightedVal :: (Applicative f) => v -> a -> AugmentedTropical f v a
 weightedVal = AT . pure
 
+-- |A simple weight with no value.
 weight :: a -> Tropical a
 weight = weightedVal ()

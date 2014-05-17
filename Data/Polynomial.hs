@@ -1,3 +1,5 @@
+{- Copyright 2014 eruonna, see LICENSE -}
+
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE FlexibleContexts #-}
@@ -12,6 +14,7 @@ import Numeric.Algebra
 
 newtype Var = V Integer deriving (Eq, Ord, Show)
 
+-- |A monomial in the variables @v@, the basis of a polynomial algebra.
 newtype Monomial v = Monomial { powers :: M.Map v Natural } deriving (Eq, Ord)
 
 instance Show v => Show (Monomial v) where
@@ -41,6 +44,10 @@ instance (Ord v) => Commutative (Monomial v) where
 instance (Ord v) => Unital (Monomial v) where
   one = Monomial M.empty
 
+-- |A polynomial over @r@ in the variables @v@. The algebra package provides
+--useful instances for @a -> r@ when @a@ is the basis of an @r@-algebra, but
+--we want to guarantee only finite sums occur and extract the support of a
+--polynomial, so we must use 'M.Map'.
 newtype Polynomial r v = Polynomial { terms :: M.Map (Monomial v) r }
 
 instance (Show r, Show v, Eq r, Monoidal r) => Show (Polynomial r v) where
@@ -78,6 +85,8 @@ instance (Ord v, Semiring r, Unital r) => Unital (Polynomial r v) where
 normalize :: (Eq r, Monoidal r) => Polynomial r v -> Polynomial r v
 normalize = Polynomial . M.filter (/= zero) . terms
 
+-- |The support of a polynomial, i.e. the set of monomials that occur with
+--nonzero coefficient.
 support :: (Eq r, Monoidal r) => Polynomial r v -> [Monomial v]
 support = M.keys . terms . normalize
 
@@ -87,8 +96,12 @@ monomial m = Polynomial $ M.singleton m one
 evalMonomial :: (Unital r) => (v -> r) -> Monomial v -> r
 evalMonomial f = product . fmap (\ (v, n) -> pow (f v) n) . M.toList . powers
 
+-- |Evaluate a polynomial.
 eval :: (Rig r) => (v -> r) -> Polynomial r v -> r
 eval f = sum . fmap (\ (m, r) -> r * evalMonomial f m) . M.toList . terms
 
 vals :: [a] -> Var -> a
 vals vs (V i) = vs !! Prelude.fromInteger i
+
+constant :: (Ord v) => r -> Polynomial r v
+constant r = Polynomial $ M.singleton one r
